@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HARRI GILBERT — Portfolio Lightbox Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,500;1,9..144,400&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --black:#0c0c0d;
+    --near-black:#141415;
+    --bone:#efece5;
+    --bone-dim:#9a978f;
+    --leader:#c23b2b;    /* film-leader countdown red */
+    --line:#2a2a2b;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--black);
+    color:var(--bone);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ===== HEADER ===== */
+  .site-header{
+    padding:56px 6vw 40px;
+    border-bottom:1px solid var(--line);
+  }
+  .eyebrow{
+    font-size:0.68rem;
+    letter-spacing:0.22em;
+    text-transform:uppercase;
+    color:var(--leader);
+    margin:0 0 14px;
+    font-weight:600;
+  }
+  .site-header h1{
+    font-family:'Fraunces',serif;
+    font-weight:300;
+    font-size:clamp(2.2rem,6vw,4rem);
+    margin:0 0 10px;
+    letter-spacing:-0.01em;
+    line-height:1;
+  }
+  .site-header p{
+    color:var(--bone-dim);
+    font-size:0.9rem;
+    margin:0;
+    max-width:520px;
+    line-height:1.5;
+  }
+
+  .demo-note{
+    margin:28px 6vw 0;
+    padding:16px 20px;
+    border:1px solid var(--line);
+    border-left:2px solid var(--leader);
+    font-size:0.78rem;
+    color:var(--bone-dim);
+    line-height:1.6;
+    max-width:640px;
+  }
+  .demo-note strong{color:var(--bone);font-weight:500;}
+  .demo-note code{
+    background:var(--near-black);
+    padding:1px 6px;
+    border-radius:3px;
+    color:#e0b8ae;
+    font-size:0.74rem;
+  }
+
+  /* ===== GRID ===== */
+  .selected-works{
+    padding:64px 6vw 100px;
+  }
+  .section-label{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    margin-bottom:28px;
+  }
+  .section-label .num{
+    font-family:'Fraunces',serif;
+    font-style:italic;
+    color:var(--leader);
+    font-size:0.95rem;
+  }
+  .section-label h2{
+    font-size:0.72rem;
+    letter-spacing:0.2em;
+    text-transform:uppercase;
+    font-weight:600;
+    margin:0;
+    color:var(--bone-dim);
+  }
+
+  .grid-wrapper{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+    gap:2px;
+  }
+  a.grid-item{
+    position:relative;
+    display:block;
+    aspect-ratio:16/10;
+    overflow:hidden;
+    text-decoration:none;
+    color:#fff;
+    cursor:pointer;
+    background:var(--near-black);
+  }
+  .grid-image{
+    width:100%;
+    height:100%;
+    background-size:cover;
+    background-position:center;
+    filter:grayscale(0.15) brightness(0.85);
+    transition:transform 0.7s cubic-bezier(0.19,1,0.22,1), filter 0.5s ease;
+  }
+  a.grid-item:hover .grid-image{
+    transform:scale(1.05);
+    filter:grayscale(0) brightness(0.65);
+  }
+  .portfolio-overlay{
+    position:absolute;
+    inset:0;
+    background:linear-gradient(to top, rgba(0,0,0,0.75), rgba(0,0,0,0.05) 60%);
+  }
+  .portfolio-text{
+    position:absolute;
+    left:20px;
+    bottom:18px;
+    right:20px;
+  }
+  .index-mark{
+    display:block;
+    font-family:'Fraunces',serif;
+    font-style:italic;
+    font-size:0.72rem;
+    color:var(--leader);
+    margin-bottom:4px;
+    letter-spacing:0.05em;
+  }
+  .portfolio-title{
+    margin:0;
+    font-family:'Fraunces',serif;
+    font-weight:400;
+    font-size:1.15rem;
+    letter-spacing:0.01em;
+  }
+  .play-ring{
+    position:absolute;
+    top:50%;left:50%;
+    transform:translate(-50%,-50%) scale(0.85);
+    width:52px;height:52px;
+    border-radius:50%;
+    border:1px solid rgba(239,236,229,0.55);
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;
+    transition:opacity 0.35s ease, transform 0.35s ease;
+  }
+  a.grid-item:hover .play-ring{opacity:1;transform:translate(-50%,-50%) scale(1);}
+  .play-ring svg{width:14px;height:14px;fill:var(--bone);margin-left:2px;}
+
+  /* ===== LIGHTBOX ===== */
+  .lightbox{
+    position:fixed;
+    inset:0;
+    z-index:9999;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(6,6,7,0.97);
+  }
+  .lightbox.active{display:flex;}
+
+  /* letterbox bars — signature motion */
+  .bar{
+    position:fixed;
+    left:0;right:0;
+    height:0;
+    background:var(--black);
+    z-index:10000;
+    transition:height 0.5s cubic-bezier(0.65,0,0.35,1);
+  }
+  .bar-top{top:0;}
+  .bar-bottom{bottom:0;}
+  .lightbox.active ~ .bar,
+  .lightbox.active + .bar{ }
+  .bars-active .bar-top,
+  .bars-active .bar-bottom{
+    height:9vh;
+  }
+
+  .lightbox-inner{
+    width:100%;
+    max-width:1040px;
+    padding:0 5vw;
+    opacity:0;
+    transform:translateY(14px);
+    transition:opacity 0.4s ease 0.15s, transform 0.4s cubic-bezier(0.19,1,0.22,1) 0.15s;
+  }
+  .lightbox.active .lightbox-inner{
+    opacity:1;
+    transform:translateY(0);
+  }
+  .video-shell{
+    position:relative;
+    width:100%;
+    aspect-ratio:16/9;
+    background:#000;
+    overflow:hidden;
+  }
+  .video-shell video{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .lightbox-caption{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-top:22px;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .lightbox-caption h3{
+    font-family:'Fraunces',serif;
+    font-weight:400;
+    font-size:1.4rem;
+    margin:0;
+  }
+  .lightbox-caption span{
+    font-size:0.72rem;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--bone-dim);
+  }
+
+  /* ===== BELOW-VIDEO STILL PANEL ===== */
+  .below-panel{
+    margin-top:26px;
+    padding-top:26px;
+    border-top:1px solid var(--line);
+    display:grid;
+    grid-template-columns:180px 1fr;
+    gap:24px;
+    align-items:start;
+  }
+  .below-still{
+    width:100%;
+    aspect-ratio:4/3;
+    background-size:cover;
+    background-position:center;
+    filter:grayscale(0.1) brightness(0.9);
+  }
+  .below-info .eyebrow-small{
+    font-size:0.66rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--leader);
+    margin:0 0 8px;
+    font-weight:600;
+  }
+  .below-info p{
+    margin:0;
+    font-size:0.85rem;
+    line-height:1.6;
+    color:var(--bone-dim);
+    max-width:520px;
+  }
+  @media (max-width:640px){
+    .below-panel{
+      grid-template-columns:1fr;
+    }
+    .below-still{aspect-ratio:16/9;}
+  }
+
+  .lightbox-close{
+    position:fixed;
+    top:calc(9vh + 20px);
+    right:24px;
+    z-index:10001;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--bone);
+    width:38px;height:38px;
+    border-radius:50%;
+    font-size:1.1rem;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    opacity:0;
+    transition:opacity 0.3s ease 0.2s, border-color 0.2s ease;
+  }
+  .lightbox.active .lightbox-close{opacity:1;}
+  .lightbox-close:hover{border-color:var(--leader);color:var(--leader);}
+
+  .lightbox-nav{
+    position:fixed;
+    top:50%;
+    transform:translateY(-50%);
+    z-index:10001;
+    background:none;
+    border:none;
+    color:var(--bone-dim);
+    font-size:1.8rem;
+    cursor:pointer;
+    padding:10px 16px;
+    opacity:0;
+    transition:opacity 0.3s ease 0.2s, color 0.2s ease;
+  }
+  .lightbox.active .lightbox-nav{opacity:1;}
+  .lightbox-nav:hover{color:var(--leader);}
+  .lightbox-prev{left:8px;}
+  .lightbox-next{right:8px;}
+
+  @media (max-width:640px){
+    .lightbox-inner{padding:0;}
+    .lightbox-caption{padding:0 20px;}
+    .lightbox-nav{display:none;}
+    .lightbox-close{top:calc(9vh + 14px);right:16px;}
+    .bars-active .bar-top,
+    .bars-active .bar-bottom{height:7vh;}
+  }
+</style>
+</head>
+<body>
+
+<div class="site-header">
+  <p class="eyebrow">Live Proof of Concept</p>
+  <h1>Harri Gilbert</h1>
+  <p>Cinematographer — Eora / Sydney, Australia. This page demonstrates the portfolio lightbox behaviour built directly on your existing Squarespace markup.</p>
+</div>
+
+<div class="demo-note">
+  Built on the real DOM confirmed via Inspector: <strong>a.grid-item</strong> with
+  <code>href="/home/[slug]"</code>. Clicking a tile calls <code>preventDefault()</code>,
+  stopping Squarespace's normal navigation, and opens the project in an overlay with a
+  letterbox reveal — instead of leaving the page. Try it below, including on your phone.
+</div>
+
+<div class="selected-works">
+  <div class="section-label">
+    <span class="num">01</span>
+    <h2>Selected Works</h2>
+  </div>
+  <div class="grid-wrapper" id="grid-wrapper">
+
+    <a class="grid-item" href="/home/tiktok" data-video="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4">
+      <div class="grid-image" style="background-image:url('https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=900')"></div>
+      <div class="portfolio-overlay"></div>
+      <div class="play-ring"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="portfolio-text">
+        <span class="index-mark">/ home / tiktok</span>
+        <h3 class="portfolio-title">TikTok — Catch Check Choose</h3>
+      </div>
+    </a>
+
+    <a class="grid-item" href="/home/wtbstm" data-video="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4">
+      <div class="grid-image" style="background-image:url('https://images.unsplash.com/photo-1517602302552-471fe67acf66?w=900')"></div>
+      <div class="portfolio-overlay"></div>
+      <div class="play-ring"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="portfolio-text">
+        <span class="index-mark">/ home / wtbstm</span>
+        <h3 class="portfolio-title">WTBSTM</h3>
+      </div>
+    </a>
+
+    <a class="grid-item" href="/home/go-to" data-video="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4">
+      <div class="grid-image" style="background-image:url('https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?w=900')"></div>
+      <div class="portfolio-overlay"></div>
+      <div class="play-ring"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="portfolio-text">
+        <span class="index-mark">/ home / go-to</span>
+        <h3 class="portfolio-title">Go-To</h3>
+      </div>
+    </a>
+
+    <a class="grid-item" href="/home/honey" data-video="https://interactive-examples.mdn.mozilla.net/media/cc0-videos/flower.mp4">
+      <div class="grid-image" style="background-image:url('https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=900')"></div>
+      <div class="portfolio-overlay"></div>
+      <div class="play-ring"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></div>
+      <div class="portfolio-text">
+        <span class="index-mark">/ home / honey</span>
+        <h3 class="portfolio-title">Honey</h3>
+      </div>
+    </a>
+
+  </div>
+</div>
+
+<div class="bar bar-top" id="bar-top"></div>
+<div class="bar bar-bottom" id="bar-bottom"></div>
+
+<div class="lightbox" id="lightbox">
+  <button class="lightbox-close" id="lightbox-close" aria-label="Close">&times;</button>
+  <button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="Previous">&#8249;</button>
+  <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="Next">&#8250;</button>
+  <div class="lightbox-inner">
+    <div class="video-shell">
+      <video id="lightbox-video" playsinline controls></video>
+    </div>
+    <div class="lightbox-caption">
+      <h3 id="lightbox-title"></h3>
+      <span id="lightbox-slug"></span>
+    </div>
+
+    <div class="below-panel">
+      <div class="below-still" id="below-still"></div>
+      <div class="below-info">
+        <p class="eyebrow-small">Behind the Scenes</p>
+        <p id="below-caption">A still from set — swap this for a real BTS photo, credits, or client/brand notes for each project.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const items = Array.from(document.querySelectorAll('a.grid-item'));
+  const lightbox = document.getElementById('lightbox');
+  const video = document.getElementById('lightbox-video');
+  const title = document.getElementById('lightbox-title');
+  const slug = document.getElementById('lightbox-slug');
+  const body = document.body;
+  let currentIndex = 0;
+
+  const belowStill = document.getElementById('below-still');
+
+  function openLightbox(index){
+    currentIndex = index;
+    const item = items[index];
+    video.src = item.getAttribute('data-video');
+    title.textContent = item.querySelector('.portfolio-title').textContent;
+    slug.textContent = item.getAttribute('href');
+    belowStill.style.backgroundImage = item.querySelector('.grid-image').style.backgroundImage;
+
+    body.classList.add('bars-active');
+    document.body.style.overflow = 'hidden';
+
+    // letterbox bars close in first, then video fades up
+    setTimeout(() => {
+      lightbox.classList.add('active');
+      video.play().catch(()=>{});
+    }, 200);
+  }
+
+  function closeLightbox(){
+    lightbox.classList.remove('active');
+    video.pause();
+    setTimeout(() => {
+      body.classList.remove('bars-active');
+      document.body.style.overflow = '';
+    }, 250);
+  }
+
+  function nav(delta){
+    video.pause();
+    lightbox.classList.remove('active');
+    currentIndex = (currentIndex + delta + items.length) % items.length;
+    setTimeout(() => openLightboxDirect(currentIndex), 200);
+  }
+
+  function openLightboxDirect(index){
+    const item = items[index];
+    video.src = item.getAttribute('data-video');
+    title.textContent = item.querySelector('.portfolio-title').textContent;
+    slug.textContent = item.getAttribute('href');
+    belowStill.style.backgroundImage = item.querySelector('.grid-image').style.backgroundImage;
+    lightbox.classList.add('active');
+    video.play().catch(()=>{});
+  }
+
+  items.forEach((item, index) => {
+    item.addEventListener('click', function(e){
+      e.preventDefault(); // stops Squarespace's default navigation to /home/[slug]
+      openLightbox(index);
+    });
+  });
+
+  document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+  document.getElementById('lightbox-prev').addEventListener('click', () => nav(-1));
+  document.getElementById('lightbox-next').addEventListener('click', () => nav(1));
+
+  lightbox.addEventListener('click', function(e){
+    if(e.target === lightbox) closeLightbox();
+  });
+
+  document.addEventListener('keydown', function(e){
+    if(!lightbox.classList.contains('active')) return;
+    if(e.key === 'Escape') closeLightbox();
+    if(e.key === 'ArrowRight') nav(1);
+    if(e.key === 'ArrowLeft') nav(-1);
+  });
+
+  let touchStartX = 0;
+  lightbox.addEventListener('touchstart', e => touchStartX = e.touches[0].clientX);
+  lightbox.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if(Math.abs(dx) > 50){ nav(dx < 0 ? 1 : -1); }
+  });
+})();
+</script>
+
+</body>
+</html>
