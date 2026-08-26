@@ -172,11 +172,11 @@
     inset:0;
     z-index:9999;
     display:none;
-    align-items:center;
-    justify-content:center;
+    overflow-y:auto;
     background:rgba(6,6,7,0.97);
+    padding:11vh 0 80px;
   }
-  .lightbox.active{display:flex;}
+  .lightbox.active{display:block;}
 
   /* letterbox bars — signature motion */
   .bar{
@@ -199,6 +199,7 @@
   .lightbox-inner{
     width:100%;
     max-width:1040px;
+    margin:0 auto;
     padding:0 5vw;
     opacity:0;
     transform:translateY(14px);
@@ -279,6 +280,76 @@
       grid-template-columns:1fr;
     }
     .below-still{aspect-ratio:16/9;}
+  }
+
+  /* ===== IMAGE GALLERY (scroll below video) ===== */
+  .gallery-panel{
+    margin-top:36px;
+    padding-top:28px;
+    border-top:1px solid var(--line);
+  }
+  .gallery-panel .eyebrow-small{
+    font-size:0.66rem;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    color:var(--leader);
+    margin:0 0 16px;
+    font-weight:600;
+  }
+  .gallery-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+    gap:6px;
+  }
+  .gallery-thumb{
+    aspect-ratio:1/1;
+    background-size:cover;
+    background-position:center;
+    cursor:pointer;
+    filter:grayscale(0.1) brightness(0.85);
+    transition:filter 0.25s ease, transform 0.25s ease;
+  }
+  .gallery-thumb:hover{
+    filter:grayscale(0) brightness(1);
+    transform:scale(1.02);
+  }
+
+  /* ===== FULLSCREEN IMAGE VIEWER ===== */
+  .image-viewer{
+    position:fixed;
+    inset:0;
+    z-index:20000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(4,4,5,0.98);
+    padding:24px;
+  }
+  .image-viewer.active{display:flex;}
+  .image-viewer img{
+    max-width:100%;
+    max-height:88vh;
+    object-fit:contain;
+    display:block;
+  }
+  .image-viewer-back{
+    position:fixed;
+    top:24px;
+    left:24px;
+    z-index:20001;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--bone);
+    width:42px;height:42px;
+    border-radius:50%;
+    font-size:1.3rem;
+    cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:border-color 0.2s ease, color 0.2s ease;
+  }
+  .image-viewer-back:hover{border-color:var(--leader);color:var(--leader);}
+  @media (max-width:640px){
+    .image-viewer-back{top:16px;left:16px;}
   }
 
   .lightbox-close{
@@ -417,7 +488,17 @@
         <p id="below-caption">A still from set — swap this for a real BTS photo, credits, or client/brand notes for each project.</p>
       </div>
     </div>
+
+    <div class="gallery-panel">
+      <p class="eyebrow-small">Gallery — scroll down, click any image to view</p>
+      <div class="gallery-grid" id="gallery-grid"></div>
+    </div>
   </div>
+</div>
+
+<div class="image-viewer" id="image-viewer">
+  <button class="image-viewer-back" id="image-viewer-back" aria-label="Back to project">&#8592;</button>
+  <img id="image-viewer-img" src="" alt="">
 </div>
 
 <script>
@@ -431,6 +512,65 @@
   let currentIndex = 0;
 
   const belowStill = document.getElementById('below-still');
+  const galleryGrid = document.getElementById('gallery-grid');
+  const imageViewer = document.getElementById('image-viewer');
+  const imageViewerImg = document.getElementById('image-viewer-img');
+  const imageViewerBack = document.getElementById('image-viewer-back');
+
+  // Placeholder gallery images per project — swap these for real BTS/production stills.
+  const galleryData = {
+    '/home/tiktok': [
+      'https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=600',
+      'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=600',
+      'https://images.unsplash.com/photo-1483721310020-03333e577078?w=600',
+      'https://images.unsplash.com/photo-1500259783852-4e01c1a2ac7f?w=600'
+    ],
+    '/home/wtbstm': [
+      'https://images.unsplash.com/photo-1517602302552-471fe67acf66?w=600',
+      'https://images.unsplash.com/photo-1504193852049-72cc79bce85f?w=600',
+      'https://images.unsplash.com/photo-1533106497176-45ae19e68ba2?w=600'
+    ],
+    '/home/go-to': [
+      'https://images.unsplash.com/photo-1500462918059-b1a0cb512f1d?w=600',
+      'https://images.unsplash.com/photo-1519681393784-d120267933ba?w=600',
+      'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=600',
+      'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=600'
+    ],
+    '/home/honey': [
+      'https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600',
+      'https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?w=600',
+      'https://images.unsplash.com/photo-1493655161922-ef98929de9d8?w=600'
+    ]
+  };
+
+  function renderGallery(href){
+    galleryGrid.innerHTML = '';
+    const images = galleryData[href] || [];
+    images.forEach(url => {
+      const thumb = document.createElement('div');
+      thumb.className = 'gallery-thumb';
+      thumb.style.backgroundImage = `url('${url}')`;
+      thumb.addEventListener('click', () => openImageViewer(url));
+      galleryGrid.appendChild(thumb);
+    });
+  }
+
+  function openImageViewer(url){
+    imageViewerImg.src = url;
+    imageViewer.classList.add('active');
+  }
+
+  function closeImageViewer(){
+    imageViewer.classList.remove('active');
+  }
+
+  imageViewerBack.addEventListener('click', closeImageViewer);
+  imageViewer.addEventListener('click', function(e){
+    if(e.target === imageViewer) closeImageViewer();
+  });
+  document.addEventListener('keydown', function(e){
+    if(imageViewer.classList.contains('active') && e.key === 'Escape') closeImageViewer();
+  });
 
   function openLightbox(index){
     currentIndex = index;
@@ -439,6 +579,7 @@
     title.textContent = item.querySelector('.portfolio-title').textContent;
     slug.textContent = item.getAttribute('href');
     belowStill.style.backgroundImage = item.querySelector('.grid-image').style.backgroundImage;
+    renderGallery(item.getAttribute('href'));
 
     body.classList.add('bars-active');
     document.body.style.overflow = 'hidden';
@@ -452,6 +593,8 @@
 
   function closeLightbox(){
     lightbox.classList.remove('active');
+    lightbox.scrollTop = 0;
+    closeImageViewer();
     video.pause();
     setTimeout(() => {
       body.classList.remove('bars-active');
@@ -462,6 +605,7 @@
   function nav(delta){
     video.pause();
     lightbox.classList.remove('active');
+    lightbox.scrollTop = 0;
     currentIndex = (currentIndex + delta + items.length) % items.length;
     setTimeout(() => openLightboxDirect(currentIndex), 200);
   }
@@ -472,6 +616,7 @@
     title.textContent = item.querySelector('.portfolio-title').textContent;
     slug.textContent = item.getAttribute('href');
     belowStill.style.backgroundImage = item.querySelector('.grid-image').style.backgroundImage;
+    renderGallery(item.getAttribute('href'));
     lightbox.classList.add('active');
     video.play().catch(()=>{});
   }
